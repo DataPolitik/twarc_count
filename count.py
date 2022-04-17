@@ -1,3 +1,4 @@
+from statistics import mean, median, stdev
 from typing import Generator
 
 import ijson
@@ -36,19 +37,33 @@ def output_value(output_string, file, is_verbose):
 @click.option('-t', '--tweets', is_flag=True, flag_value=True, default=False, help='Count tweets')
 @click.option('-u', '--users', is_flag=True, flag_value=True, default=False, help='Count users')
 @click.option('-l', '--languages', is_flag=True, flag_value=True, default=False, help='Count languages')
-@click.option('-g', '--group', type=click.Choice(['users', 'languages']),  multiple=True,
+@click.option('-e', '--length', is_flag=True, flag_value=True, default=False, help='Size of text')
+@click.option('-g', '--group', type=click.Choice(['users', 'languages', 'length']),  multiple=True,
               help='Groups by one field. Shows mean, median and standard deviation per group.')
 @click.option('-d', '--details', is_flag=True, flag_value=True, default=False, help='Get detailed information')
 @click.option('-sa', '--sort-alphabetically', type=click.Choice(['asc', 'desc']),
               help='If -d option is enabled, sort information.')
 @click.option('-sf', '--sort-frequency', type=click.Choice(['asc', 'desc']),
               help='If -d option is enabled, sort information by frequency.')
-def count(infile, outfile, verbose, tweets, users, languages, group, details, sort_alphabetically, sort_frequency):
+def count(infile,
+          outfile,
+          verbose,
+          tweets,
+          users,
+          languages,
+          length,
+          group,
+          details,
+          sort_alphabetically,
+          sort_frequency):
+
     dataset_columns = []
     if users:
         dataset_columns.append('users')
     if languages:
         dataset_columns.append('languages')
+    if length:
+        dataset_columns.append('length')
 
     list_of_dicts = []
     number_of_tweets = 0
@@ -66,6 +81,9 @@ def count(infile, outfile, verbose, tweets, users, languages, group, details, so
             if 'languages' in dataset_columns:
                 tweet_language = detect(tweet['text'])
                 response_dictionary['languages'] = tweet_language
+            if 'length' in dataset_columns:
+                tweet_size = len(tweet['text'])
+                response_dictionary['length'] = tweet_size
 
             list_of_dicts.append(response_dictionary)
 
@@ -76,19 +94,32 @@ def count(infile, outfile, verbose, tweets, users, languages, group, details, so
         output_value(output_string, outfile, verbose)
 
     for column in dataset_columns:
-        unique_values = pd.unique(dataframe[column])
-        output_string = "{}: {}".format(column, len(unique_values))
-        output_value(output_string, outfile, verbose)
-        if details:
-            if sort_alphabetically:
-                unique_values.sort() if sort_alphabetically == 'asc' else unique_values[::-1].sort()
-            elif sort_frequency:
-                unique_values = sort_by_frequency(dataframe[column], sort_alphabetically == 'asc')
-            output_value(', '.join(unique_values), outfile, verbose)
+        if column == 'length':
+            output_string = '''average size: {}\nmedian size: {}\nstd size: {}\nmax size: {}\nmin size: {}'''.format(
+                mean(dataframe[column]),
+                median(dataframe[column]),
+                stdev(dataframe[column]),
+                max(dataframe[column]),
+                min(dataframe[column])
+            )
+            output_value(output_string, outfile, verbose)
+        else:
+            unique_values = pd.unique(dataframe[column])
+            output_string = "{}: {}".format(column, len(unique_values))
+            output_value(output_string, outfile, verbose)
+            if details:
+                if sort_alphabetically:
+                    unique_values.sort() if sort_alphabetically == 'asc' else unique_values[::-1].sort()
+                elif sort_frequency:
+                    unique_values = sort_by_frequency(dataframe[column], sort_alphabetically == 'asc')
+                output_value(', '.join(unique_values), outfile, verbose)
 
     if group:
+        stats = [np.size]
+        if length:
+            stats.extend([np.mean, np.median])
         group_list = list(group)
-        gb = dataframe.groupby(group_list)[group_list[0]].agg([np.size]).reset_index()
+        gb = dataframe.groupby(group_list)[group_list[0]].agg(stats).reset_index()
         output_string = "\n\nGroup by {}".format(group_list)
         output_value(output_string, outfile, verbose)
         output_string = gb.to_string(index=False)
