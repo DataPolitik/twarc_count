@@ -1,10 +1,26 @@
-import json
+from typing import Generator
+
+import ijson
 import click
 import pandas as pd
+import numpy as np
 
 from langdetect import detect, DetectorFactory
 
 DetectorFactory.seed = 0
+
+
+def load_json_file(infile) -> Generator:
+    json_file = ijson.items(infile, '', multiple_values=True)
+    generator: Generator = (o for o in json_file)
+    return generator
+
+
+def sort_by_frequency(arr, is_asc_sort):
+    unique_elements, frequency = np.unique(arr, return_counts=True)
+    sorted_indexes = np.argsort(frequency)[::-1]
+    sorted_elements = unique_elements[sorted_indexes]
+    return sorted_elements[::-1] if is_asc_sort else sorted_elements
 
 
 def output_value(output_string, file, is_verbose):
@@ -23,7 +39,9 @@ def output_value(output_string, file, is_verbose):
 @click.option('-d', '--details', is_flag=True, flag_value=True, default=False, help='Get detailed information')
 @click.option('-sa', '--sort-alphabetically', type=click.Choice(['asc', 'desc']),
               help='If -d option is enabled, sort information.')
-def count(infile, outfile, verbose, tweets, users, languages, details, sort_alphabetically):
+@click.option('-sf', '--sort-frequency', type=click.Choice(['asc', 'desc']),
+              help='If -d option is enabled, sort information by frequency.')
+def count(infile, outfile, verbose, tweets, users, languages, details, sort_alphabetically, sort_frequency):
     dataset_columns = []
     if users:
         dataset_columns.append('users')
@@ -33,8 +51,9 @@ def count(infile, outfile, verbose, tweets, users, languages, details, sort_alph
     list_of_dicts = []
     number_of_tweets = 0
 
-    for line in infile:
-        tweet = json.loads(line)
+    tweet_generator: Generator = load_json_file(infile)
+
+    for tweet in tweet_generator:
         number_of_tweets = number_of_tweets + 1
 
         if len(dataset_columns) > 0:
@@ -61,6 +80,8 @@ def count(infile, outfile, verbose, tweets, users, languages, details, sort_alph
         if details:
             if sort_alphabetically:
                 unique_values.sort() if sort_alphabetically == 'asc' else unique_values[::-1].sort()
+            elif sort_frequency:
+                unique_values = sort_by_frequency(dataframe[column], sort_alphabetically == 'asc')
             output_value(', '.join(unique_values), outfile, verbose)
 
 
