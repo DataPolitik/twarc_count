@@ -12,6 +12,7 @@ COLUMNS_OPERATIONS: Dict[str, List[str]] = {
     'languages': ['count']
 }
 
+
 def load_json_file(infile) -> Generator:
     json_file = ijson.items(infile, '', multiple_values=True)
     generator: Generator = (o for o in json_file)
@@ -40,7 +41,8 @@ def output_value(output_string, file, is_verbose):
 @click.option('-u', '--users', is_flag=True, flag_value=True, default=False, help='Count users')
 @click.option('-l', '--languages', is_flag=True, flag_value=True, default=False, help='Count languages')
 @click.option('-e', '--length', is_flag=True, flag_value=True, default=False, help='Size of text')
-@click.option('-p', '--pandas', type=click.Choice(['csv', 'json', 'pickle']), help='Exports the pandas dataframe in the specified format')
+@click.option('-p', '--pandas', type=click.Choice(['csv', 'json', 'pickle']),
+              help='Exports the pandas dataframe in the specified format')
 @click.option('-g', '--group', type=click.Choice(['users', 'languages', 'length']), multiple=True,
               help='Groups by one field. Shows mean, median and standard deviation per group.')
 @click.option('-d', '--details', is_flag=True, flag_value=True, default=False, help='Get detailed information')
@@ -96,11 +98,12 @@ def count(infile,
 
     dataframe = pd.DataFrame(list_of_dicts)
     if sort_alphabetically:
-        dataframe = dataframe.sort_values(by=dataset_columns_list, ascending= sort_alphabetically == 'asc')
+        dataframe = dataframe.sort_values(by=dataset_columns_list, ascending=sort_alphabetically == 'asc')
     elif sort_frequency:
         sorted_list = ['freq'] + dataset_columns_list
-        dataframe = dataframe.assign(freq=dataframe.groupby(dataset_columns_list[0])[dataset_columns_list[0]].transform('count')) \
-            .sort_values(by=sorted_list, ascending= sort_frequency == 'asc')
+        dataframe = dataframe\
+            .assign(freq=dataframe.groupby(dataset_columns_list[0])[dataset_columns_list[0]].transform('count')) \
+            .sort_values(by=sorted_list, ascending=sort_frequency == 'asc')
         dataframe = dataframe.drop(columns=['freq'])
 
     if tweets:
@@ -125,8 +128,8 @@ def count(infile,
                 output_value(', '.join(unique_values), outfile, verbose)
 
     if group:
-        if len(dataset_columns) == 1:
-            dataframe = dataframe.groupby(dataset_columns[0]).size().reset_index()
+        if len(dataset_columns_list) == 1:
+            dataframe = dataframe.groupby(dataset_columns_list[0]).size().reset_index()
         else:
             group_as_list = list(group)
             operations_dict = {}
