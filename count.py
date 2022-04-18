@@ -6,11 +6,6 @@ import click
 import pandas as pd
 import numpy as np
 
-from langdetect import detect, DetectorFactory
-
-DetectorFactory.seed = 0
-
-
 COLUMNS_OPERATIONS: Dict[str, List[str]] = {
     'users': ['count'],
     'length': ['mean', 'min', 'max'],
@@ -91,7 +86,7 @@ def count(infile,
                 user_id = tweet['author']['id']
                 response_dictionary['users'] = user_id
             if 'languages' in dataset_columns:
-                tweet_language = detect(tweet['text'])
+                tweet_language = tweet['lang']
                 response_dictionary['languages'] = tweet_language
             if 'length' in dataset_columns:
                 tweet_size = len(tweet['text'])
