@@ -95,6 +95,13 @@ def count(infile,
             list_of_dicts.append(response_dictionary)
 
     dataframe = pd.DataFrame(list_of_dicts)
+    if sort_alphabetically:
+        dataframe = dataframe.sort_values(by=dataset_columns_list, ascending= sort_alphabetically == 'asc')
+    elif sort_frequency:
+        sorted_list = ['freq'] + dataset_columns_list
+        dataframe = dataframe.assign(freq=dataframe.groupby(dataset_columns_list[0])[dataset_columns_list[0]].transform('count')) \
+            .sort_values(by=sorted_list, ascending= sort_frequency == 'asc')
+        dataframe = dataframe.drop(columns=['freq'])
 
     if tweets:
         output_string = "{}: {}".format("tweets", number_of_tweets)
@@ -115,10 +122,6 @@ def count(infile,
             output_string = "{}: {}".format(column, len(unique_values))
             output_value(output_string, outfile, verbose)
             if details:
-                if sort_alphabetically:
-                    unique_values.sort() if sort_alphabetically == 'asc' else unique_values[::-1].sort()
-                elif sort_frequency:
-                    unique_values = sort_by_frequency(dataframe[column], sort_alphabetically == 'asc')
                 output_value(', '.join(unique_values), outfile, verbose)
 
     if group:
