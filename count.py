@@ -62,6 +62,11 @@ def count(infile,
           details,
           sort_alphabetically,
           sort_frequency):
+
+    if not tweets and not users and not languages and not length and not sort_frequency and not sort_alphabetically and not group:
+        print("Nothing to count")
+        return 0
+
     dataset_columns = {}
     dataset_columns_list = []
     if users:
